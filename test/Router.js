@@ -43,6 +43,16 @@ describe('Router', function(){
     router.handle({ url: '/test/route', method: 'GET' }, { end: done });
   });
 
+  it('should handle blank URL', function(done){
+    var router = new Router();
+
+    router.use(function (req, res) {
+      false.should.be.true;
+    });
+
+    router.handle({ url: '', method: 'GET' }, {}, done);
+  });
+
   describe('.handle', function(){
     it('should dispatch', function(done){
       var router = new Router();
@@ -209,6 +219,23 @@ describe('Router', function(){
       });
     });
 
+    it('should ignore FQDN in path', function (done) {
+      var request = { hit: 0, url: '/proxy/http://example.com/blog/post/1', method: 'GET' };
+      var router = new Router();
+
+      router.use('/proxy', function (req, res, next) {
+        assert.equal(req.hit++, 0);
+        assert.equal(req.url, '/http://example.com/blog/post/1');
+        next();
+      });
+
+      router.handle(request, {}, function (err) {
+        if (err) return done(err);
+        assert.equal(request.hit, 1);
+        done();
+      });
+    });
+
     it('should adjust FQDN req.url', function (done) {
       var request = { hit: 0, url: 'http://example.com/blog/post/1', method: 'GET' };
       var router = new Router();
@@ -294,6 +321,43 @@ describe('Router', function(){
 
       assert.equal(count, methods.length);
       done();
+    })
+  })
+
+  describe('.use', function() {
+    it('should require arguments', function(){
+      var router = new Router();
+      router.use.bind(router).should.throw(/requires middleware function/)
+    })
+
+    it('should not accept non-functions', function(){
+      var router = new Router();
+      router.use.bind(router, '/', 'hello').should.throw(/requires middleware function.*string/)
+      router.use.bind(router, '/', 5).should.throw(/requires middleware function.*number/)
+      router.use.bind(router, '/', null).should.throw(/requires middleware function.*Null/)
+      router.use.bind(router, '/', new Date()).should.throw(/requires middleware function.*Date/)
+    })
+
+    it('should accept array of middleware', function(done){
+      var count = 0;
+      var router = new Router();
+
+      function fn1(req, res, next){
+        assert.equal(++count, 1);
+        next();
+      }
+
+      function fn2(req, res, next){
+        assert.equal(++count, 2);
+        next();
+      }
+
+      router.use([fn1, fn2], function(req, res){
+        assert.equal(++count, 3);
+        done();
+      });
+
+      router.handle({ url: '/foo', method: 'GET' }, {}, function(){});
     })
   })
 

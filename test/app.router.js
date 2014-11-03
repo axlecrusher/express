@@ -630,7 +630,7 @@ describe('app.router', function(){
       .expect('', done);
     })
 
-    it('should require a preceeding /', function(done){
+    it('should require a preceding /', function(done){
       var app = express();
 
       app.get('/file/*', function(req, res){
@@ -678,6 +678,23 @@ describe('app.router', function(){
       request(app)
       .get('/user/tj/edit')
       .expect('editing tj', done);
+    })
+
+    it('should work in array of paths', function(done){
+      var app = express();
+      var cb = after(2, done);
+
+      app.get(['/user/:user/poke', '/user/:user/pokes'], function(req, res){
+        res.end('poking ' + req.params.user);
+      });
+
+      request(app)
+      .get('/user/tj/poke')
+      .expect('poking tj', cb);
+
+      request(app)
+      .get('/user/tj/pokes')
+      .expect('poking tj', cb);
     })
   })
 
